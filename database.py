@@ -109,3 +109,23 @@ def get_all_user_words(user_id):
     finally:
         conn.close()
 
+def delete_word_by_id(word_id):
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        c.execute('DELETE FROM words WHERE id = ?', (word_id,))
+        conn.commit()
+        return c.rowcount > 0
+    finally:
+        conn.close()
+
+def delete_word_by_text(user_id, word_text):
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        c.execute('DELETE FROM words WHERE user_id = ? AND word = ?', (user_id, word_text))
+        conn.commit()
+        return c.rowcount > 0
+    finally:
+        conn.close()
+

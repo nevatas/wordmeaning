@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ConversationHandler
 
 import database
 import ai_client
@@ -176,6 +176,93 @@ async def list_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message, parse_mode='Markdown')
 
 
+# Delete command conversation states
+WAITING_FOR_DELETE_INPUT = 1
+
+async def delete_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    # Check if word is provided as argument
+    if context.args:
+        word_to_delete = ' '.join(context.args)
+        deleted = database.delete_word_by_text(user_id, word_to_delete)
+        
+        if deleted:
+            await update.message.reply_text(f"✅ Слово *{word_to_delete}* удалено из списка.", parse_mode='Markdown')
+        else:
+            await update.message.reply_text(f"❌ Слово *{word_to_delete}* не найдено в вашем списке.", parse_mode='Markdown')
+        
+        return ConversationHandler.END
+    
+    # No arguments - show interactive list
+    words = database.get_all_user_words(user_id)
+    
+    if not words:
+        await update.message.reply_text("📚 Ваш список слов пуст.")
+        return ConversationHandler.END
+    
+    # Store words in context for later use
+    context.user_data['delete_words'] = words
+    
+    # Format numbered list
+    message = "📝 *Выберите слова для удаления:*\n\n"
+    for idx, word_row in enumerate(words, 1):
+        message += f"{idx}. {word_row['word']}\n"
+    
+    message += "\n💡 Введите номера через запятую (например: 1,3,5) или названия слов.\n"
+    message += "Для отмены введите /cancel"
+    
+    await update.message.reply_text(message, parse_mode='Markdown')
+    
+    return WAITING_FOR_DELETE_INPUT
+
+async def delete_process_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user_input = update.message.text.strip()
+    words = context.user_data.get('delete_words', [])
+    
+    if not words:
+        await update.message.reply_text("❌ Ошибка: список слов не найден. Попробуйте /delete снова.")
+        return ConversationHandler.END
+    
+    deleted_words = []
+    
+    # Check if input contains numbers (comma-separated)
+    if ',' in user_input or user_input.isdigit():
+        # Parse as numbers
+        try:
+            indices = [int(x.strip()) for x in user_input.split(',')]
+            for idx in indices:
+                if 1 <= idx <= len(words):
+                    word_row = words[idx - 1]
+                    if database.delete_word_by_id(word_row['id']):
+                        deleted_words.append(word_row['word'])
+        except ValueError:
+            await update.message.reply_text("❌ Неверный формат. Используйте номера через запятую (например: 1,3,5)")
+            return WAITING_FOR_DELETE_INPUT
+    else:
+        # Parse as word names (comma-separated or single word)
+        word_names = [w.strip() for w in user_input.split(',')]
+        for word_name in word_names:
+            if database.delete_word_by_text(user_id, word_name):
+                deleted_words.append(word_name)
+    
+    # Clear context
+    context.user_data.pop('delete_words', None)
+    
+    if deleted_words:
+        words_list = ", ".join([f"*{w}*" for w in deleted_words])
+        await update.message.reply_text(f"✅ Удалено слов: {len(deleted_words)}\n\n{words_list}", parse_mode='Markdown')
+    else:
+        await update.message.reply_text("❌ Не удалось удалить слова. Проверьте ввод.")
+    
+    return ConversationHandler.END
+
+async def delete_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.pop('delete_words', None)
+    await update.message.reply_text("❌ Удаление отменено.")
+    return ConversationHandler.END
+
 
 async def post_init(application):
     """Set up bot commands menu"""
@@ -183,6 +270,7 @@ async def post_init(application):
         BotCommand("start", "Начать работу с ботом"),
         BotCommand("train", "Начать сессию повторения слов"),
         BotCommand("list", "Показать все мои слова"),
+        BotCommand("delete", "Удалить слова из списка"),
     ])
 
 
@@ -204,9 +292,19 @@ if __name__ == '__main__':
     list_handler = CommandHandler('list', list_words)
     callback_handler = CallbackQueryHandler(button)
     
+    # Delete conversation handler
+    delete_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('delete', delete_command)],
+        states={
+            WAITING_FOR_DELETE_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_process_input)],
+        },
+        fallbacks=[CommandHandler('cancel', delete_cancel)],
+    )
+    
     application.add_handler(start_handler)
     application.add_handler(train_handler)
     application.add_handler(list_handler)
+    application.add_handler(delete_conv_handler)
     application.add_handler(callback_handler)
     application.add_handler(message_handler) 
     
