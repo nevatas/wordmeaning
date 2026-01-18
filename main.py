@@ -181,6 +181,7 @@ async def post_init(application):
         BotCommand("list", "Показать все мои слова"),
     ])
 
+
 if __name__ == '__main__':
     # Initialize DB
     database.init_db()
@@ -206,5 +207,7 @@ if __name__ == '__main__':
     application.add_handler(message_handler) 
     
     print("Bot is running...")
-    application.run_polling()
+    # Drop pending updates to avoid conflicts when restarting
+    application.run_polling(drop_pending_updates=True)
+
 
