@@ -33,7 +33,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if word.startswith('/'):
         return
 
-    await update.message.reply_text(f"🔍 Defining '{word}'...")
+    # Send "Defining..." message and save it to delete later
+    status_message = await update.message.reply_text(f"🔍 Defining '{word}'...")
     
     definition_text = ai_client.get_definition(word)
     
@@ -45,6 +46,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     response = f"📖 *{word}*\n\n{definition_text}\n\n_Word saved to library._"
     
     await update.message.reply_text(response, parse_mode='Markdown')
+    
+    # Delete the "Defining..." message
+    await status_message.delete()
 
 async def train(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
