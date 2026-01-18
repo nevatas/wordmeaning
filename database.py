@@ -2,7 +2,10 @@ import sqlite3
 from datetime import datetime
 import os
 
-DB_NAME = "bot.db"
+# Use data directory for database (Docker-friendly)
+DATA_DIR = os.getenv("DATA_DIR", "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_NAME = os.path.join(DATA_DIR, "bot.db")
 
 def get_connection():
     conn = sqlite3.connect(DB_NAME)

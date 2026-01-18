@@ -48,3 +48,63 @@ python3 main.py
 2. Создайте новый Web Service из GitHub репозитория
 3. Добавьте переменные окружения
 4. Деплой произойдет автоматически
+
+## Деплой через Docker
+
+### Локальный запуск с Docker Compose
+
+1. Убедитесь, что у вас установлен Docker и Docker Compose
+2. Создайте файл `.env` с переменными окружения (см. выше)
+3. Запустите бота:
+
+```bash
+docker-compose up -d
+```
+
+4. Просмотр логов:
+
+```bash
+docker-compose logs -f
+```
+
+5. Остановка бота:
+
+```bash
+docker-compose down
+```
+
+### Сборка и запуск Docker образа вручную
+
+```bash
+# Сборка образа
+docker build -t wordmeaning-bot .
+
+# Запуск контейнера
+docker run -d \
+  --name wordmeaning-bot \
+  --restart unless-stopped \
+  -e TELEGRAM_BOT_TOKEN="your_token" \
+  -e OPENAI_API_KEY="your_key" \
+  -v $(pwd)/data:/app/data \
+  wordmeaning-bot
+```
+
+### Деплой на VPS с Docker
+
+1. Склонируйте репозиторий на сервер:
+```bash
+git clone https://github.com/nevatas/wordmeaning.git
+cd wordmeaning
+```
+
+2. Создайте `.env` файл с вашими ключами
+
+3. Запустите через docker-compose:
+```bash
+docker-compose up -d
+```
+
+4. Настройте автоматическое обновление при пуше (опционально):
+```bash
+# Установите webhook или используйте GitHub Actions
+```
