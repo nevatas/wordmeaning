@@ -126,6 +126,51 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await query.message.edit_text(text, parse_mode='Markdown', reply_markup=reply_markup)
 
+async def list_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    words = database.get_all_user_words(user_id)
+    
+    if not words:
+        await update.message.reply_text("📚 Ваш список слов пуст. Отправьте любое слово, чтобы добавить его!")
+        return
+    
+    # Format the list
+    message = f"📚 *Ваши слова* ({len(words)} всего):\n\n"
+    
+    for word_row in words:
+        word = word_row['word']
+        level = word_row['repetition_level']
+        next_review = word_row['next_review_at']
+        
+        # Parse next review date
+        if next_review:
+            try:
+                review_date = datetime.fromisoformat(next_review)
+                now = datetime.now()
+                if review_date <= now:
+                    status = "⏰ Готово к повторению"
+                else:
+                    days_left = (review_date - now).days
+                    if days_left == 0:
+                        status = "📅 Сегодня"
+                    elif days_left == 1:
+                        status = "📅 Завтра"
+                    else:
+                        status = f"📅 Через {days_left} дн."
+            except:
+                status = "📅 Скоро"
+        else:
+            status = "🆕 Новое"
+        
+        # Add emoji based on level
+        level_emoji = "🌱" if level == 0 else "🌿" if level <= 2 else "🌳"
+        
+        message += f"{level_emoji} *{word}* — {status}\n"
+    
+    message += f"\n💡 Используйте /train для начала повторения"
+    
+    await update.message.reply_text(message, parse_mode='Markdown')
+
 
 
 async def post_init(application):
@@ -133,6 +178,7 @@ async def post_init(application):
     await application.bot.set_my_commands([
         BotCommand("start", "Начать работу с ботом"),
         BotCommand("train", "Начать сессию повторения слов"),
+        BotCommand("list", "Показать все мои слова"),
     ])
 
 if __name__ == '__main__':
@@ -150,12 +196,15 @@ if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
     message_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)
     train_handler = CommandHandler('train', train)
+    list_handler = CommandHandler('list', list_words)
     callback_handler = CallbackQueryHandler(button)
     
     application.add_handler(start_handler)
     application.add_handler(train_handler)
+    application.add_handler(list_handler)
     application.add_handler(callback_handler)
     application.add_handler(message_handler) 
     
     print("Bot is running...")
     application.run_polling()
+

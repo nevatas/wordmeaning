@@ -95,3 +95,17 @@ def update_word_progress(word_id, new_level, next_review_at):
         conn.commit()
     finally:
         conn.close()
+
+def get_all_user_words(user_id):
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            SELECT * FROM words 
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        ''', (user_id,))
+        return c.fetchall()
+    finally:
+        conn.close()
+
