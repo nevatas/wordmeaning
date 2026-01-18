@@ -2,7 +2,7 @@ import logging
 import os
 from datetime import datetime
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
 import database
@@ -128,6 +128,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
+async def post_init(application):
+    """Set up bot commands menu"""
+    await application.bot.set_my_commands([
+        BotCommand("start", "Начать работу с ботом"),
+        BotCommand("train", "Начать сессию повторения слов"),
+    ])
+
 if __name__ == '__main__':
     # Initialize DB
     database.init_db()
@@ -138,7 +145,7 @@ if __name__ == '__main__':
         print("Error: TELEGRAM_BOT_TOKEN not set in .env")
         exit(1)
         
-    application = ApplicationBuilder().token(token).build()
+    application = ApplicationBuilder().token(token).post_init(post_init).build()
     
     start_handler = CommandHandler('start', start)
     message_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)
