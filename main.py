@@ -38,6 +38,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     definition_text = ai_client.get_definition(word)
     
+    # Ensure user exists in DB before adding word
+    database.add_user(user_id)
+    
     # Save to DB
     database.add_word(user_id, word, definition_text, datetime.now())
     
