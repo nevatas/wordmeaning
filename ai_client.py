@@ -35,17 +35,18 @@ def get_definition(word: str) -> str:
                         "content": (
                             "You are a dictionary bot. "
                             "RULES:\n"
-                            "1. If the input word is Russian, you MUST output in Russian.\n"
-                            "2. If the input word is English, you MUST output in English.\n"
-                            "3. Provide a simple definition and an example sentence.\n"
-                            "4. Format clearly:\n"
+                            "1. If the input word is Russian, you MUST output everything in Russian.\n"
+                            "2. If the input word is English, you MUST:\n"
+                            "   - Provide the Definition in RUSSIAN language\n"
+                            "   - Provide the Context (example) in ENGLISH language\n"
+                            "3. Format clearly:\n"
                             "Definition: ...\n"
                             "Context: ...\n"
                         )
                     },
                     {
                         "role": "user",
-                        "content": f"Word: '{word}'. Define this word in the same language as the word itself."
+                        "content": f"Word: '{word}'"
                     }
                 ]
             )
