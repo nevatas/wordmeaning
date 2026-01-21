@@ -178,6 +178,74 @@ async def list_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(message, parse_mode='Markdown')
 
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    stats = database.get_user_stats(user_id)
+    
+    if stats['total'] == 0:
+        await update.message.reply_text(
+            "📊 Статистика пуста!\n\n"
+            "Отправьте любое слово, чтобы начать обучение."
+        )
+        return
+    
+    message = f"""📊 *Ваша статистика обучения*
+
+📚 Всего слов: {stats['total']}
+
+🆕 Новые слова: {stats['new_words']}
+📖 В процессе изучения: {stats['learning']}
+✅ Освоенные (уровень 3+): {stats['mastered']}
+
+⏰ Готово к повторению сейчас: {stats['due_now']}
+
+💡 Используйте /train для начала тренировки!
+"""
+    
+    await update.message.reply_text(message, parse_mode='Markdown')
+
+async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    if not context.args:
+        await update.message.reply_text(
+            "🔍 Использование: /search слово\n\n"
+            "Пример: /search apple"
+        )
+        return
+    
+    search_term = ' '.join(context.args)
+    
+    # Try exact match first
+    results = database.search_word_exact(user_id, search_term)
+    
+    # If no exact match, try partial
+    if not results:
+        results = database.search_word_partial(user_id, search_term)
+    
+    if not results:
+        await update.message.reply_text(
+            f"❌ Слово '*{search_term}*' не найдено в вашем словаре.\n\n"
+            f"💡 Отправьте это слово боту, чтобы добавить его!",
+            parse_mode='Markdown'
+        )
+        return
+    
+    if len(results) == 1:
+        word_row = results[0]
+        level_emoji = "🌱" if word_row['repetition_level'] == 0 else "🌿" if word_row['repetition_level'] <= 2 else "🌳"
+        
+        message = f"{level_emoji} *{word_row['word']}*\n\n{word_row['definition']}\n\n_Уровень: {word_row['repetition_level']}_"
+        await update.message.reply_text(message, parse_mode='Markdown')
+    else:
+        message = f"🔍 Найдено слов: {len(results)}\n\n"
+        for word_row in results:
+            level_emoji = "🌱" if word_row['repetition_level'] == 0 else "🌿" if word_row['repetition_level'] <= 2 else "🌳"
+            message += f"{level_emoji} *{word_row['word']}*\n"
+        
+        message += "\n💡 Отправьте /search точное_слово для просмотра определения"
+        await update.message.reply_text(message, parse_mode='Markdown')
+
 
 # Delete command conversation states
 WAITING_FOR_DELETE_INPUT = 1
@@ -273,6 +341,8 @@ async def post_init(application):
         BotCommand("start", "Начать работу с ботом"),
         BotCommand("train", "Начать сессию повторения слов"),
         BotCommand("list", "Показать все мои слова"),
+        BotCommand("stats", "Показать статистику обучения"),
+        BotCommand("search", "Найти слово в словаре"),
         BotCommand("delete", "Удалить слова из списка"),
     ])
 
@@ -293,6 +363,8 @@ if __name__ == '__main__':
     message_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)
     train_handler = CommandHandler('train', train)
     list_handler = CommandHandler('list', list_words)
+    stats_handler = CommandHandler('stats', stats)
+    search_handler = CommandHandler('search', search)
     callback_handler = CallbackQueryHandler(button)
     
     # Delete conversation handler
@@ -307,6 +379,8 @@ if __name__ == '__main__':
     application.add_handler(start_handler)
     application.add_handler(train_handler)
     application.add_handler(list_handler)
+    application.add_handler(stats_handler)
+    application.add_handler(search_handler)
     application.add_handler(delete_conv_handler)
     application.add_handler(callback_handler)
     application.add_handler(message_handler) 

@@ -153,3 +153,53 @@ def delete_word_by_text(user_id, word_text):
     finally:
         c.close()
         conn.close()
+
+def search_word_exact(user_id, word_text):
+    """Search for exact word match"""
+    conn = get_connection()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        c.execute('''
+            SELECT * FROM words 
+            WHERE user_id = %s AND LOWER(word) = LOWER(%s)
+        ''', (user_id, word_text))
+        return c.fetchall()
+    finally:
+        c.close()
+        conn.close()
+
+def search_word_partial(user_id, word_text):
+    """Search for partial word match"""
+    conn = get_connection()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        c.execute('''
+            SELECT * FROM words 
+            WHERE user_id = %s AND LOWER(word) LIKE LOWER(%s)
+            ORDER BY word ASC
+            LIMIT 10
+        ''', (user_id, f'%{word_text}%'))
+        return c.fetchall()
+    finally:
+        c.close()
+        conn.close()
+
+def get_user_stats(user_id):
+    """Get statistics for a user"""
+    conn = get_connection()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        c.execute('''
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN repetition_level = 0 THEN 1 END) as new_words,
+                COUNT(CASE WHEN repetition_level BETWEEN 1 AND 2 THEN 1 END) as learning,
+                COUNT(CASE WHEN repetition_level >= 3 THEN 1 END) as mastered,
+                COUNT(CASE WHEN next_review_at <= NOW() THEN 1 END) as due_now
+            FROM words 
+            WHERE user_id = %s
+        ''', (user_id,))
+        return c.fetchone()
+    finally:
+        c.close()
+        conn.close()

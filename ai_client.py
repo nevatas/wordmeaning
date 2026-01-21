@@ -37,9 +37,11 @@ def get_definition(word: str) -> str:
                             "RULES:\n"
                             "1. If the input word is Russian, you MUST output everything in Russian.\n"
                             "2. If the input word is English, you MUST:\n"
+                            "   - Provide IPA pronunciation in format: Pronunciation: /ˈwɜːrd/\n"
                             "   - Provide the Definition in RUSSIAN language\n"
                             "   - Provide the Context (example) in ENGLISH language\n"
                             "3. Format clearly:\n"
+                            "Pronunciation: /.../ (only for English words)\n"
                             "Definition: ...\n"
                             "Context: ...\n"
                         )
