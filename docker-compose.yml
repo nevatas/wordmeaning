@@ -1,15 +1,38 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: wordmeaning-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=wordmeaning
+      - POSTGRES_PASSWORD=wordmeaning_password
+      - POSTGRES_DB=wordmeaning
+    volumes:
+      # Persist database data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wordmeaning"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Telegram Bot
   bot:
     build: .
     container_name: wordmeaning-bot
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    volumes:
-      # Persist database between container restarts
-      - ./data:/app/data
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - DATABASE_URL=postgresql://wordmeaning:wordmeaning_password@postgres:5432/wordmeaning
     env_file:
       - .env
+
+volumes:
+  postgres_data:
