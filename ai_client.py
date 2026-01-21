@@ -40,9 +40,11 @@ def get_definition(word: str) -> str:
                             "   - Provide IPA pronunciation in format: Pronunciation: /ˈwɜːrd/\n"
                             "   - Provide the Definition in RUSSIAN language\n"
                             "   - Provide the Context (example) in ENGLISH language\n"
-                            "3. Format clearly:\n"
+                            "3. Format clearly with EMPTY LINES between sections:\n"
                             "Pronunciation: /.../ (only for English words)\n"
+                            "\n"
                             "Definition: ...\n"
+                            "\n"
                             "Context: ...\n"
                         )
                     },
