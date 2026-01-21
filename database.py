@@ -8,6 +8,12 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_connection():
     """Create a connection to PostgreSQL database"""
+    if not DATABASE_URL:
+        raise ValueError(
+            "DATABASE_URL не установлена! "
+            "Добавьте переменную окружения DATABASE_URL в Railway.\n"
+            "Инструкция: https://github.com/nevatas/wordmeaning/blob/main/RAILWAY_SETUP.md"
+        )
     conn = psycopg2.connect(DATABASE_URL)
     return conn
 
